@@ -1,0 +1,80 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 🐍 设置 Python 环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 📦 安装 Buildozer 依赖
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          git \
+          zip \
+          unzip \
+          openjdk-17-jdk \
+          autoconf \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake \
+          libffi-dev \
+          libssl-dev \
+          python3-setuptools
+    
+    - name: 📦 安装 Buildozer
+      run: |
+        pip install --upgrade pip
+        pip install buildozer
+        pip install cython==0.29.33
+    
+    - name: 📝 准备主程序
+      run: |
+        cp android_main.py main.py
+        echo "✅ 已创建 main.py"
+    
+    - name: 🔨 构建 APK
+      run: |
+        yes | buildozer android debug || buildozer android debug
+    
+    - name: 📊 显示构建结果
+      run: |
+        ls -lh bin/ || echo "bin 目录不存在"
+        if [ -f bin/*.apk ]; then
+          echo "✅ APK 构建成功！"
+          ls -lh bin/*.apk
+        else
+          echo "❌ APK 构建失败"
+          exit 1
+        fi
+    
+    - name: 📤 上传 APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: pestreportextractor-apk
+        path: bin/*.apk
+        if-no-files-found: error
+    
+    - name: 🎉 创建 Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: bin/*.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

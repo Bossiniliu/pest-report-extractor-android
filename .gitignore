@@ -1,0 +1,44 @@
+# Buildozer 构建文件
+.buildozer/
+bin/
+build/
+dist/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 临时文件
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# 本地构建日志
+build_log.txt
+build_output.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 测试文件
+*.pdf
+*.xlsx
+!虫害情况报告_完整示例.xlsx
