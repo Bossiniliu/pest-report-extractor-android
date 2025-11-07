@@ -34,7 +34,6 @@ android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANA
 android.api = 33
 android.minapi = 21
 android.ndk = 25b
-android.sdk = 33
 
 # Android 架构
 android.archs = arm64-v8a,armeabi-v7a
