@@ -17,7 +17,7 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 2.0
 
 # 应用依赖
-requirements = python3,kivy,pdfplumber,openpyxl,pandas,pillow,pycryptodome,charset-normalizer
+requirements = python3,kivy==2.3.0,pdfplumber,openpyxl,pandas,pillow,pycryptodome,charset-normalizer,cryptography,cffi,pycparser
 
 # 图标和启动画面（可选，如果没有会使用默认）
 # icon.filename = %(source.dir)s/icon.png
