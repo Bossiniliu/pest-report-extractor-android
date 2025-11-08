@@ -7,17 +7,14 @@
 **修改的配置项：**
 
 ```spec
-# 添加 MANAGE_EXTERNAL_STORAGE 权限
-android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, INTERNET, MANAGE_EXTERNAL_STORAGE
+# 仅使用 INTERNET 权限 - 完全依赖应用专属存储
+android.permissions = INTERNET
 
-# 更新 targetSdkVersion 到 33
-android.targetSdkVersion = 33
+# 更新 targetSdkVersion 到 34 (Android 14+)
+android.api = 34
+android.targetSdkVersion = 34
 
-# 添加传统存储支持（Android 11+）
-android.manifest.application = requestLegacyExternalStorage="true"
-
-# 声明所有文件访问权限
-android.manifest.uses-permission = MANAGE_EXTERNAL_STORAGE
+# 移除所有危险权限声明，避免 Android 15+ 闪退
 ```
 
 ### 2. android_main.py 代码更新
@@ -28,17 +25,19 @@ android.manifest.uses-permission = MANAGE_EXTERNAL_STORAGE
 - ✅ 文件保存到：`/Android/data/com.pestcontrol.pestreportextractor/files/Documents/虫害报告/`
 
 **权限请求改进：**
-- ✅ Android 11+ 会引导用户到设置页面授予"所有文件访问权限"（可选）
-- ✅ Android 10 及以下使用传统权限请求
-- ✅ 更友好的用户提示信息
+- ✅ **完全移除所有存储权限请求** - 避免 Android 15+ 闪退
+- ✅ 100% 使用应用专属存储，无需用户授权
+- ✅ 支持 Android 5.0 - Android 15+
 
 ## 📱 Android 版本支持
 
 | Android 版本 | API Level | 存储策略 | 是否需要用户授权 |
 |-------------|-----------|---------|---------------|
-| Android 10 及以下 | ≤ 29 | 传统外部存储 | 是（运行时权限） |
-| Android 11+ | ≥ 30 | 应用专属存储 | **否**（自动可用） |
-| Android 11+ | ≥ 30 | 所有文件访问 | 是（手动设置） |
+| Android 5-9 | 21-28 | 应用专属存储 | **否**（自动可用） |
+| Android 10-14 | 29-34 | 应用专属存储 | **否**（自动可用） |
+| Android 15+ | 35+ | 应用专属存储 | **否**（自动可用） |
+
+✅ **所有版本均使用应用专属存储，无需任何权限！**
 
 ## 🚀 使用方法
 

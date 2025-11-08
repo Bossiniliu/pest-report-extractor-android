@@ -498,46 +498,23 @@ class PestReportApp(App):
         return main_layout
     
     def request_android_permissions(self, dt):
-        """请求Android权限（延迟执行）"""
+        """显示存储路径信息（无需权限）"""
         try:
             from android import api_version
-            
-            permissions = [
-                Permission.READ_EXTERNAL_STORAGE,
-                Permission.WRITE_EXTERNAL_STORAGE
-            ]
-            
-            # Android 11+ (API 30+) 特殊处理
-            if api_version >= 30:
-                self.update_status('📱 Android 11+ 检测到\n\n文件将保存到应用专属目录：\n/Android/data/.../files/Documents/虫害报告\n\n无需额外权限！')
-                
-                # 尝试请求 MANAGE_EXTERNAL_STORAGE（可选）
-                try:
-                    from jnius import autoclass
-                    Intent = autoclass('android.content.Intent')
-                    Settings = autoclass('android.provider.Settings')
-                    Uri = autoclass('android.net.Uri')
-                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
-                    
-                    # 检查是否有所有文件访问权限
-                    if api_version >= 30:
-                        Environment = autoclass('android.os.Environment')
-                        if not Environment.isExternalStorageManager():
-                            # 引导用户到设置页面
-                            intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                            uri = Uri.parse(f"package:{PythonActivity.mActivity.getPackageName()}")
-                            intent.setData(uri)
-                            PythonActivity.mActivity.startActivity(intent)
-                            self.update_status('📱 请在设置中授予"所有文件访问权限"\n\n（可选，用于访问共享存储）')
-                except Exception as e:
-                    print(f"无法请求 MANAGE_EXTERNAL_STORAGE: {e}")
-            else:
-                # Android 10 及以下
-                request_permissions(permissions)
-                self.update_status('✅ 权限请求已发送\n如果未弹出权限对话框，请手动在设置中授权')
-                
+            self.update_status(
+                f'📂 应用专属存储\n'
+                f'📱 Android {api_version} 检测到\n\n'
+                f'文件将自动保存到：\n'
+                f'{STORAGE_PATH}\n\n'
+                f'✅ 无需任何权限！\n'
+                f'可以直接使用。'
+            )
         except Exception as e:
-            self.update_status(f'📂 使用应用专属存储\n文件将保存到:\n{STORAGE_PATH}')
+            self.update_status(
+                f'📂 应用专属存储\n'
+                f'文件将保存到：\n{STORAGE_PATH}\n\n'
+                f'✅ 无需权限，可直接使用。'
+            )
     
     def select_pdf(self, instance):
         """选择PDF文件"""
