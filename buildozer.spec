@@ -20,11 +20,10 @@ source.include_exts = py,png,jpg,kv,atlas
 # 版本号
 version = 2.2
 
-# 应用依赖 - 使用最小配置以确保构建成功
-# 只保留必要的库，避免复杂的依赖冲突
-# python3 和 kivy 是必须的，其他库可选
-requirements = python3==3.9,\
-               kivy==2.1.0
+# 应用依赖 - 最小化配置
+# 不指定版本号，让 buildozer 自动选择兼容的版本
+requirements = python3,\
+               kivy
 
 # 图标和启动画面
 # icon.filename = %(source.dir)s/icon.png
