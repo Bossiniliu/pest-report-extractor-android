@@ -37,7 +37,7 @@ jobs:
           automake \
           libtool \
           gettext \
-          gettext-base \
+          dh-autoreconf \
           pkg-config \
           zlib1g-dev \
           libncurses5-dev \
@@ -48,8 +48,27 @@ jobs:
           libltdl-dev \
           python3-setuptools \
           build-essential
-        # 确保 autopoint 可用
-        which autopoint || sudo ln -s /usr/bin/autopoint /usr/local/bin/autopoint 2>/dev/null || true
+        
+        # 验证 autopoint 命令
+        echo "=== 验证 autopoint ==="
+        if ! command -v autopoint &> /dev/null; then
+          echo "autopoint 不存在，查找位置..."
+          sudo find /usr -name "autopoint" 2>/dev/null || true
+          
+          # 尝试重新安装 gettext
+          sudo apt remove -y gettext
+          sudo apt install -y gettext
+          
+          # 再次验证
+          if ! command -v autopoint &> /dev/null; then
+            echo "ERROR: autopoint 仍然不可用！"
+            dpkg -L gettext | grep autopoint || true
+            exit 1
+          fi
+        fi
+        
+        autopoint --version
+        echo "✅ autopoint 命令可用"
     
     - name: 📦 安装 Buildozer
       run: |
