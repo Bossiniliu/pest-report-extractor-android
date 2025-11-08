@@ -13,6 +13,11 @@ jobs:
     - name: 📥 检出代码
       uses: actions/checkout@v4
     
+    - name: 🔧 配置 Git 环境
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global --add safe.directory '*'
+    
     - name: 🐍 设置 Python 环境
       uses: actions/setup-python@v5
       with:
@@ -49,8 +54,6 @@ jobs:
       run: |
         cp android_main.py main.py
         echo "✅ 已创建main.py"
-        # 修复 Git 仓库所有权问题
-        git config --global --add safe.directory '*'
     
     - name: 🔨 构建 APK
       env:
