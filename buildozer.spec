@@ -11,17 +11,10 @@ package.domain = com.pestcontrol
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 
-# ===== Android 14 (API 34) 回退配置 =====
-# 这个配置针对 Android 14，尽管设备是 Android 16
-# 这样做的目的是告诉 Android 16：
-# "我只需要 Android 14 的功能"
-# 可以绕过 Android 16 的某些新限制
-#
 # 版本号
-version = 2.2
+version = 3.0
 
 # 应用依赖 - 最小化配置
-# 不指定版本号，让 buildozer 自动选择兼容的版本
 requirements = python3,\
                kivy
 
@@ -33,21 +26,25 @@ requirements = python3,\
 orientation = portrait
 fullscreen = 0
 
+# 禁用 OpenGL（解决 Android 16 libpenguin.so 问题）
+# Kivy 会使用软件渲染而不是硬件 OpenGL
+android.features = !android.hardware.opengl.es2
+
 # Android 权限 - 仅网络权限
 android.permissions = INTERNET
 
-# ===== 关键：降级到 Android 14 标准 =====
-# API 版本配置 - 针对 Android 14（编译 API 34）
+# ===== Android 16 优化配置 =====
+# API 版本配置 - 编译 API 34
 android.api = 34
-# 最低支持 Android 5.0
-android.minapi = 21
-# 目标 Android 12 - 兼容性模式
+# 最低支持 Android 6.0
+android.minapi = 23
+# 目标 Android 12 - 启用兼容性模式解决 Android 16 问题
 android.targetSdkVersion = 31
 
 # 使用稳定的 NDK
 android.ndk = 25b
 
-# 仅编译 ARM64（S25 Ultra）
+# 仅编译 ARM64（Samsung S25 Ultra）
 android.archs = arm64-v8a
 
 # 接受许可证
@@ -58,6 +55,9 @@ android.entrypoint = org.kivy.android.PythonActivity
 
 # 使用 Apache HTTP 库支持
 android.uses_library = org.apache.http.legacy
+
+# 禁用 OpenGL multisampling（可能导致线程问题）
+android.gl_multisampling = False
 
 # 跳过更新（加速构建）
 android.skip_update = False
