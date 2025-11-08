@@ -34,6 +34,7 @@ jobs:
           unzip \
           openjdk-17-jdk \
           autoconf \
+          automake \
           libtool \
           pkg-config \
           zlib1g-dev \
@@ -42,7 +43,9 @@ jobs:
           cmake \
           libffi-dev \
           libssl-dev \
-          python3-setuptools
+          libltdl-dev \
+          python3-setuptools \
+          build-essential
     
     - name: 📦 安装 Buildozer
       run: |
