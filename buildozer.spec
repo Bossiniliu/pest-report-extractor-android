@@ -38,10 +38,12 @@ fullscreen = 0
 android.permissions = INTERNET
 
 # ===== Android 16 特定配置 =====
-# API 版本配置
-android.api = 36              # 编译 API 36（Android 16）
-android.minapi = 30           # 最低支持 Android 11
-android.targetSdkVersion = 34 # 目标保持在 34 以兼容性为主
+# API 版本配置（编译 API 36 - Android 16）
+android.api = 36
+# 最低支持 Android 11
+android.minapi = 30
+# 目标保持在 34 以兼容性为主
+android.targetSdkVersion = 34
 
 # 使用最新的 NDK
 android.ndk = 26b
