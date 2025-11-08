@@ -41,8 +41,8 @@ android.permissions = INTERNET
 android.api = 34
 # 最低支持 Android 5.0
 android.minapi = 21
-# 目标 Android 13
-android.targetSdkVersion = 33
+# 目标 Android 12 - 兼容性模式
+android.targetSdkVersion = 31
 
 # 使用稳定的 NDK
 android.ndk = 25b
