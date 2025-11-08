@@ -26,10 +26,6 @@ requirements = python3,\
 orientation = portrait
 fullscreen = 0
 
-# 禁用 OpenGL（解决 Android 16 libpenguin.so 问题）
-# Kivy 会使用软件渲染而不是硬件 OpenGL
-android.features = !android.hardware.opengl.es2
-
 # Android 权限 - 仅网络权限
 android.permissions = INTERNET
 
