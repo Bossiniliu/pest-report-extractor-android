@@ -28,10 +28,13 @@ from datetime import datetime
 
 # Android 存储路径
 try:
-    from android.permissions import request_permissions, Permission
+    from android.permissions import request_permissions, Permission, check_permission
     from android.storage import primary_external_storage_path
     ANDROID = True
-    STORAGE_PATH = primary_external_storage_path()
+    try:
+        STORAGE_PATH = primary_external_storage_path()
+    except Exception:
+        STORAGE_PATH = "/sdcard"
 except ImportError:
     ANDROID = False
     STORAGE_PATH = str(Path.home())
@@ -387,17 +390,15 @@ class PestReportApp(App):
     """Kivy应用主类"""
     
     def build(self):
+        """构建应用界面"""
         Window.clearcolor = (0.95, 0.95, 0.95, 1)
-        
-        # 请求Android权限
-        if ANDROID:
-            request_permissions([
-                Permission.READ_EXTERNAL_STORAGE,
-                Permission.WRITE_EXTERNAL_STORAGE
-            ])
         
         self.extractor = PestReportExtractor()
         self.selected_pdf = None
+        
+        # 延迟请求权限(避免启动时闪退)
+        if ANDROID:
+            Clock.schedule_once(self.request_android_permissions, 0.5)
         
         # 主布局
         main_layout = BoxLayout(orientation='vertical', padding=dp(15), spacing=dp(10))
@@ -472,6 +473,28 @@ class PestReportApp(App):
         main_layout.add_widget(scroll)
         
         return main_layout
+    
+    def request_android_permissions(self, dt):
+        """请求Android权限（延迟执行）"""
+        try:
+            permissions = [
+                Permission.READ_EXTERNAL_STORAGE,
+                Permission.WRITE_EXTERNAL_STORAGE
+            ]
+            
+            # Android 11+ 需要额外权限
+            try:
+                from android import api_version
+                if api_version >= 30:
+                    # Android 11+ 使用分区存储
+                    self.update_status('📱 Android 11+ 检测到\n请在应用设置中授予文件访问权限')
+            except:
+                pass
+            
+            request_permissions(permissions)
+            self.update_status('✅ 权限请求已发送\n如果未弹出权限对话框，请手动在设置中授权')
+        except Exception as e:
+            self.update_status(f'⚠️ 权限请求失败: {str(e)}\n请手动在设置中授予存储权限')
     
     def select_pdf(self, instance):
         """选择PDF文件"""
@@ -618,4 +641,30 @@ class PestReportApp(App):
 
 
 if __name__ == '__main__':
-    PestReportApp().run()
+    import sys
+    import traceback
+    
+    try:
+        print("=" * 50)
+        print("🐛 虫害报告提取工具 v2.0")
+        print(f"Android: {ANDROID}")
+        print(f"Storage Path: {STORAGE_PATH}")
+        print(f"Python Version: {sys.version}")
+        print("=" * 50)
+        
+        app = PestReportApp()
+        app.run()
+    except Exception as e:
+        error_msg = f"\n\n应用启动失败:\n{str(e)}\n\n{traceback.format_exc()}"
+        print(error_msg)
+        
+        # 尝试写入错误日志
+        try:
+            error_file = Path(STORAGE_PATH) / "pest_error.log"
+            with open(error_file, 'w', encoding='utf-8') as f:
+                f.write(error_msg)
+            print(f"\n错误日志已保存: {error_file}")
+        except:
+            pass
+        
+        raise

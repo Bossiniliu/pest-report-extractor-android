@@ -1,0 +1,708 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+虫害情况自动提取工具 v2.0
+功能：从PDF中提取虫害数据，转换为Excel格式，生成分析报告，并进行数据验证
+
+使用方法：
+1. GUI模式（macOS/Windows）：直接运行 python pest_report_extractor.py
+2. 命令行模式：python pest_report_extractor.py --pdf <pdf文件路径> [--output <输出目录>] [--report]
+3. 命令行模式示例：python pest_report_extractor.py --pdf report.pdf --output ~/Desktop --report
+"""
+
+import re
+import sys
+import argparse
+from pathlib import Path
+import pdfplumber
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+import pandas as pd
+from datetime import datetime
+import subprocess
+import platform
+
+# 尝试导入tkinter（用于GUI模式）
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox
+    HAS_GUI = True
+except ImportError:
+    HAS_GUI = False
+
+
+class PestReportExtractor:
+    """虫害报告提取器"""
+    
+    def __init__(self):
+        self.pdf_path = None
+        self.pest_data = []
+        self.output_path = None
+        
+    def select_file(self, file_type="pdf"):
+        """选择文件对话框（GUI模式）"""
+        if not HAS_GUI:
+            print("❌ GUI模式不可用，请使用命令行参数指定文件")
+            return None
+            
+        root = tk.Tk()
+        root.withdraw()
+        root.lift()
+        root.attributes('-topmost', True)
+        
+        if file_type == "pdf":
+            file_path = filedialog.askopenfilename(
+                title="选择虫害报告PDF文件",
+                filetypes=[("PDF文件", "*.pdf"), ("所有文件", "*.*")]
+            )
+        else:
+            file_path = filedialog.askopenfilename(
+                title="选择参考格式截图（可选）",
+                filetypes=[("图片文件", "*.png *.jpg *.jpeg"), ("所有文件", "*.*")]
+            )
+        
+        root.destroy()
+        return file_path
+    
+    def extract_pest_data_from_pdf(self, pdf_path):
+        """从PDF中提取虫害数据"""
+        print(f"\n📄 正在读取PDF文件: {Path(pdf_path).name}")
+        self.pest_data = []
+        
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                full_text = ""
+                for page in pdf.pages:
+                    full_text += page.extract_text() + "\n"
+                
+                # 提取虫害情况部分
+                pest_section = self._extract_pest_section(full_text)
+                
+                if not pest_section:
+                    print("❌ 未找到虫害情况数据")
+                    return False
+                
+                # 解析虫害记录
+                self._parse_pest_records(pest_section)
+                
+                print(f"✅ 成功提取 {len(self.pest_data)} 条虫害活动记录")
+                return True
+                
+        except Exception as e:
+            print(f"❌ PDF读取失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _extract_pest_section(self, text):
+        """提取虫害情况部分的文本"""
+        # 查找虫害情况开始和结束的标记
+        start_marker = "虫害情况"
+        end_marker = "服务总结"
+        
+        start_idx = text.find(start_marker)
+        end_idx = text.find(end_marker)
+        
+        if start_idx != -1 and end_idx != -1:
+            return text[start_idx:end_idx]
+        return None
+    
+    def _parse_pest_records(self, text):
+        """解析虫害记录"""
+        # 清理文本中的特殊字符
+        text = text.replace('\x01', ' ')
+        
+        # 按行分割
+        lines = text.split('\n')
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            # 匹配虫害类型和数量：如 "绿化飞虫 发现虫害活动 - 5"
+            # 支持多种分隔符和空格
+            pest_match = re.match(r'^([\u4e00-\u9fa5]+)\s+发现虫害活动\s*[-–—]\s*(\d+)', line)
+            if pest_match:
+                pest_type = pest_match.group(1)
+                count = int(pest_match.group(2))
+                
+                # 查找下一行的建筑物信息
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    # 支持更灵活的模式匹配
+                    building_match = re.search(
+                        r'建筑物:\s*([^,]+),\s*楼层:\s*([^,]+),\s*部门:\s*([^,]+),\s*检查/发现监测点位:\s*(.+)',
+                        next_line
+                    )
+                    
+                    if building_match:
+                        building = building_match.group(1).strip()
+                        floor = building_match.group(2).strip()
+                        department = building_match.group(3).strip()
+                        location = building_match.group(4).strip()
+                        
+                        # 添加记录
+                        self.pest_data.append({
+                            '建筑物': building,
+                            '楼层': floor,
+                            '部门': department,
+                            '检查/发现监测点位': location,
+                            '虫害类型': pest_type,
+                            '发现虫害活动': count
+                        })
+    
+    def create_excel(self, output_dir=None):
+        """创建Excel文件"""
+        if not self.pest_data:
+            print("❌ 没有数据可以导出")
+            return False
+        
+        print("\n📊 正在生成Excel文件...")
+        
+        # 创建工作簿
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "虫害情况"
+        
+        # 表头
+        headers = ["建筑物", "楼层", "部门", "检查/发现监测点位", "虫害类型", "发现虫害活动"]
+        ws.append(headers)
+        
+        # 设置表头样式
+        header_fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        header_font = Font(bold=True, size=11)
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        # 添加数据
+        for record in self.pest_data:
+            ws.append([
+                record['建筑物'],
+                record['楼层'],
+                record['部门'],
+                record['检查/发现监测点位'],
+                record['虫害类型'],
+                record['发现虫害活动']
+            ])
+        
+        # 设置数据行样式
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+            for cell in row:
+                cell.border = border
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # 设置列宽
+        ws.column_dimensions['A'].width = 15
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 20
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 15
+        
+        # 保存文件
+        if output_dir is None:
+            output_dir = Path.home() / "Desktop"
+        else:
+            output_dir = Path(output_dir)
+        
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"虫害情况报告_{timestamp}.xlsx"
+        self.output_path = output_dir / filename
+        
+        wb.save(self.output_path)
+        print(f"✅ Excel文件已保存: {self.output_path}")
+        return True
+    
+    def generate_analysis_report(self):
+        """生成分析报告作为新的工作表"""
+        if not self.output_path or not self.output_path.exists():
+            print("❌ Excel文件不存在，无法生成报告")
+            return False
+        
+        print("\n📈 正在生成分析报告...")
+        
+        # 读取Excel文件
+        wb = load_workbook(self.output_path)
+        df = pd.read_excel(self.output_path, sheet_name='虫害情况')
+        
+        # 创建分析报告工作表
+        if "虫害分析" in wb.sheetnames:
+            del wb["虫害分析"]
+        ws_report = wb.create_sheet("虫害分析", 0)
+        
+        # 计算统计数据
+        total_records = len(df)
+        total_pests = df['发现虫害活动'].sum()
+        avg_density = total_pests / total_records if total_records > 0 else 0
+        max_single = df['发现虫害活动'].max()
+        
+        # 虫害类型统计
+        pest_type_stats = df.groupby('虫害类型').agg({
+            '虫害类型': 'count',
+            '发现虫害活动': 'sum'
+        }).rename(columns={'虫害类型': '记录数', '发现虫害活动': '总数量'})
+        pest_type_stats['占比'] = (pest_type_stats['总数量'] / total_pests * 100).round(1)
+        pest_type_stats = pest_type_stats.sort_values('总数量', ascending=False)
+        
+        # 建筑物统计
+        building_stats = df.groupby('建筑物').agg({
+            '建筑物': 'count',
+            '发现虫害活动': 'sum'
+        }).rename(columns={'建筑物': '记录数', '发现虫害活动': '总数量'})
+        building_stats['占比'] = (building_stats['总数量'] / total_pests * 100).round(1)
+        building_stats = building_stats.sort_values('总数量', ascending=False)
+        
+        # TOP 10高危区域
+        top10 = df.nlargest(10, '发现虫害活动')
+        
+        # 开始绘制报告
+        self._draw_overview_section(ws_report, total_records, total_pests, avg_density, max_single)
+        self._draw_pest_type_stats(ws_report, pest_type_stats, 10)
+        self._draw_building_stats(ws_report, building_stats, 18 + len(pest_type_stats))
+        self._draw_top10_section(ws_report, top10, 26 + len(pest_type_stats) + len(building_stats))
+        
+        # 保存文件
+        wb.save(self.output_path)
+        print(f"✅ 分析报告已添加到工作表: 虫害分析")
+        return True
+    
+    def _draw_overview_section(self, ws, total_records, total_pests, avg_density, max_single):
+        """绘制数据概览部分"""
+        # 标题
+        ws.merge_cells('A1:G2')
+        title_cell = ws['A1']
+        title_cell.value = "虫害情况数据概览"
+        title_cell.font = Font(size=16, bold=True)
+        title_cell.alignment = Alignment(horizontal='left', vertical='center')
+        
+        # 概览卡片
+        overview_data = [
+            ('总记录数', f'{total_records} 条'),
+            ('虫害总数', f'{total_pests} 只'),
+            ('平均密度', f'{avg_density:.1f} 只/处'),
+            ('⚠️ 最大单点', f'{max_single} 只')
+        ]
+        
+        row = 4
+        for i, (label, value) in enumerate(overview_data):
+            col = i * 2 + 1
+            
+            # 标签
+            label_cell = ws.cell(row=row, column=col)
+            label_cell.value = label
+            label_cell.font = Font(size=11, bold=True)
+            label_cell.alignment = Alignment(horizontal='left', vertical='center')
+            
+            # 值
+            value_cell = ws.cell(row=row+1, column=col)
+            value_cell.value = value
+            value_cell.font = Font(size=13, bold=True)
+            value_cell.alignment = Alignment(horizontal='left', vertical='center')
+            
+            # 如果是最大单点，高亮显示
+            if '⚠️' in label:
+                value_cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+        
+        # 设置列宽
+        for col in range(1, 9):
+            ws.column_dimensions[get_column_letter(col)].width = 15
+    
+    def _draw_pest_type_stats(self, ws, pest_type_stats, start_row):
+        """绘制虫害类型统计表"""
+        # 小标题
+        row = start_row
+        ws.merge_cells(f'A{row}:D{row}')
+        subtitle_cell = ws[f'A{row}']
+        subtitle_cell.value = "虫害类型统计"
+        subtitle_cell.font = Font(size=13, bold=True)
+        subtitle_cell.alignment = Alignment(horizontal='left', vertical='center')
+        subtitle_cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        
+        # 表头
+        row += 1
+        headers = ['虫害类型', '记录数', '总数量（只）', '占比']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.font = Font(bold=True, size=11)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            cell.border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+        
+        # 数据行
+        for pest_type, data in pest_type_stats.iterrows():
+            row += 1
+            values = [pest_type, int(data['记录数']), int(data['总数量']), f"{data['占比']}%"]
+            for col, value in enumerate(values, 1):
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+    
+    def _draw_building_stats(self, ws, building_stats, start_row):
+        """绘制建筑物统计表"""
+        # 小标题
+        row = start_row
+        ws.merge_cells(f'A{row}:D{row}')
+        subtitle_cell = ws[f'A{row}']
+        subtitle_cell.value = "建筑物虫害统计"
+        subtitle_cell.font = Font(size=13, bold=True)
+        subtitle_cell.alignment = Alignment(horizontal='left', vertical='center')
+        subtitle_cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        
+        # 表头
+        row += 1
+        headers = ['建筑物', '记录数', '总数量（只）', '占比']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.font = Font(bold=True, size=11)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+            cell.border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+        
+        # 数据行
+        for building, data in building_stats.iterrows():
+            row += 1
+            values = [building, int(data['记录数']), int(data['总数量']), f"{data['占比']}%"]
+            for col, value in enumerate(values, 1):
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+    
+    def _draw_top10_section(self, ws, top10_df, start_row):
+        """绘制高危区域TOP10表"""
+        # 标题
+        row = start_row
+        ws.merge_cells(f'A{row}:G{row}')
+        title_cell = ws[f'A{row}']
+        title_cell.value = "高危区域分析 - TOP 10"
+        title_cell.font = Font(size=14, bold=True)
+        title_cell.alignment = Alignment(horizontal='left', vertical='center')
+        title_cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        
+        # 表头
+        row += 1
+        headers = ['排名', '建筑物', '楼层', '部门', '监测点位', '虫害类型', '数量']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.font = Font(bold=True, size=11)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+            cell.font = Font(bold=True, size=11, color="FFFFFF")
+            cell.border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+        
+        # 数据行
+        for idx, record in top10_df.iterrows():
+            row += 1
+            rank = row - start_row - 1
+            values = [
+                rank,
+                record['建筑物'],
+                record['楼层'],
+                record['部门'],
+                record['检查/发现监测点位'],
+                record['虫害类型'],
+                int(record['发现虫害活动'])
+            ]
+            
+            for col, value in enumerate(values, 1):
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+                
+                # 前三名高亮
+                if rank <= 3:
+                    cell.fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+        
+        # 设置列宽
+        ws.column_dimensions['A'].width = 8
+        ws.column_dimensions['E'].width = 18
+        ws.column_dimensions['G'].width = 10
+    
+    def verify_data(self):
+        """验证生成的Excel数据"""
+        if not self.output_path or not self.output_path.exists():
+            print("❌ Excel文件不存在，无法验证")
+            return False
+        
+        print("\n🔍 开始验证数据...")
+        
+        # 读取生成的Excel
+        df = pd.read_excel(self.output_path, sheet_name='虫害情况')
+        
+        # 验证1: 记录数量
+        print(f"\n1️⃣ 记录数量验证:")
+        print(f"   提取的原始数据: {len(self.pest_data)} 条")
+        print(f"   Excel文件中数据: {len(df)} 条")
+        if len(self.pest_data) == len(df):
+            print("   ✅ 数量一致")
+        else:
+            print("   ❌ 数量不一致")
+            return False
+        
+        # 验证2: 字段完整性
+        print(f"\n2️⃣ 字段完整性验证:")
+        expected_columns = ["建筑物", "楼层", "部门", "检查/发现监测点位", "虫害类型", "发现虫害活动"]
+        actual_columns = df.columns.tolist()
+        if expected_columns == actual_columns:
+            print("   ✅ 所有字段完整")
+        else:
+            print(f"   ❌ 字段不匹配")
+            print(f"   期望: {expected_columns}")
+            print(f"   实际: {actual_columns}")
+            return False
+        
+        # 验证3: 数据完整性（无空值）
+        print(f"\n3️⃣ 数据完整性验证:")
+        null_counts = df.isnull().sum()
+        if null_counts.sum() == 0:
+            print("   ✅ 无空值数据")
+        else:
+            print("   ⚠️ 发现空值:")
+            for col, count in null_counts[null_counts > 0].items():
+                print(f"   {col}: {count} 个空值")
+        
+        # 验证4: 逐条对比
+        print(f"\n4️⃣ 逐条数据验证:")
+        all_match = True
+        mismatches = []
+        
+        for i, (original, excel_row) in enumerate(zip(self.pest_data, df.to_dict('records')), 1):
+            for key in original.keys():
+                if str(original[key]) != str(excel_row[key]):
+                    all_match = False
+                    mismatches.append({
+                        'row': i,
+                        'field': key,
+                        'original': original[key],
+                        'excel': excel_row[key]
+                    })
+        
+        if all_match:
+            print("   ✅ 所有记录验证通过")
+        else:
+            print(f"   ❌ 发现 {len(mismatches)} 处不匹配:")
+            for mm in mismatches[:5]:  # 只显示前5个
+                print(f"      第{mm['row']}条 - {mm['field']}: {mm['original']} != {mm['excel']}")
+            if len(mismatches) > 5:
+                print(f"      ...还有 {len(mismatches)-5} 处不匹配")
+        
+        # 验证5: 统计信息
+        print(f"\n5️⃣ 数据统计验证:")
+        print(f"   建筑物分布:")
+        for building, count in df['建筑物'].value_counts().items():
+            print(f"   - {building}: {count} 条")
+        
+        print(f"\n   虫害类型分布:")
+        for pest_type, count in df['虫害类型'].value_counts().items():
+            print(f"   - {pest_type}: {count} 次")
+        
+        print(f"\n   虫害活动总数: {df['发现虫害活动'].sum()}")
+        
+        print(f"\n✅ 数据验证完成！")
+        return True
+    
+    def run(self, pdf_path=None, output_dir=None, auto_open=False, generate_report=True):
+        """运行完整流程
+        
+        Args:
+            pdf_path: PDF文件路径（如果为None则弹出选择对话框）
+            output_dir: 输出目录（如果为None则使用桌面）
+            auto_open: 是否自动打开生成的文件
+            generate_report: 是否生成分析报告
+        """
+        print("=" * 60)
+        print("🐛 虫害情况数据提取工具 v2.0")
+        print("=" * 60)
+        
+        # 1. 获取PDF文件
+        if pdf_path is None:
+            print("\n📁 步骤1: 选择PDF文件")
+            pdf_path = self.select_file("pdf")
+            
+            if not pdf_path:
+                print("❌ 未选择PDF文件，程序退出")
+                return False
+        else:
+            print(f"\n📁 步骤1: 使用PDF文件: {Path(pdf_path).name}")
+            if not Path(pdf_path).exists():
+                print(f"❌ 文件不存在: {pdf_path}")
+                return False
+        
+        self.pdf_path = pdf_path
+        
+        # 2. 提取数据
+        print("\n📊 步骤2: 提取虫害数据")
+        if not self.extract_pest_data_from_pdf(pdf_path):
+            return False
+        
+        # 3. 生成Excel
+        print("\n💾 步骤3: 生成Excel文件")
+        if not self.create_excel(output_dir):
+            return False
+        
+        # 4. 生成分析报告（默认生成）
+        print("\n📈 步骤4: 生成分析报告")
+        if generate_report:
+            self.generate_analysis_report()
+        else:
+            print("   ⏭️  跳过分析报告生成")
+        
+        # 5. 验证数据
+        print(f"\n🔍 步骤5: 验证数据")
+        self.verify_data()
+        
+        print("\n" + "=" * 60)
+        print("✅ 所有步骤完成！")
+        print(f"📁 文件位置: {self.output_path}")
+        if generate_report:
+            print("📊 分析报告已包含在Excel文件中")
+        print("=" * 60)
+        
+        # 询问是否打开文件（仅GUI模式）
+        if HAS_GUI and not auto_open and pdf_path is None:
+            root = tk.Tk()
+            root.withdraw()
+            root.lift()
+            root.attributes('-topmost', True)
+            
+            result = messagebox.askyesno(
+                "完成",
+                f"数据提取完成！\n\n共提取 {len(self.pest_data)} 条虫害记录\n{'已生成分析报告' if generate_report else ''}\n\n是否打开Excel文件？"
+            )
+            
+            root.destroy()
+            
+            if result:
+                self._open_file(self.output_path)
+        elif auto_open:
+            self._open_file(self.output_path)
+        
+        return True
+    
+    def _open_file(self, file_path):
+        """使用系统默认程序打开文件"""
+        try:
+            system = platform.system()
+            if system == 'Darwin':  # macOS
+                subprocess.run(['open', str(file_path)])
+            elif system == 'Windows':
+                subprocess.run(['start', str(file_path)], shell=True)
+            else:  # Linux
+                subprocess.run(['xdg-open', str(file_path)])
+        except Exception as e:
+            print(f"⚠️ 无法自动打开文件: {e}")
+
+
+def main():
+    """主函数"""
+    parser = argparse.ArgumentParser(
+        description='虫害情况自动提取工具 v2.0',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例：
+  GUI模式（弹出文件选择框）：
+    python pest_report_extractor.py
+
+  命令行模式（指定PDF文件）：
+    python pest_report_extractor.py --pdf report.pdf
+
+  命令行模式（生成报告）：
+    python pest_report_extractor.py --pdf report.pdf --report
+
+  命令行模式（指定输出目录并自动打开）：
+    python pest_report_extractor.py --pdf report.pdf --output ~/Desktop --report --open
+        """
+    )
+    
+    parser.add_argument('--pdf', type=str, help='PDF文件路径')
+    parser.add_argument('--output', type=str, help='输出目录（默认为桌面）')
+    parser.add_argument('--open', action='store_true', help='生成后自动打开Excel文件')
+    parser.add_argument('--report', action='store_true', help='生成数据分析报告')
+    
+    args = parser.parse_args()
+    
+    try:
+        extractor = PestReportExtractor()
+        
+        # 如果没有提供PDF参数且没有GUI，则提示用法
+        if args.pdf is None and not HAS_GUI:
+            print("❌ 错误：命令行模式需要指定PDF文件")
+            print("\n使用方法：")
+            print("  python pest_report_extractor.py --pdf <pdf文件路径>")
+            print("\n示例：")
+            print("  python pest_report_extractor.py --pdf report.pdf --output ~/Desktop --report")
+            return
+        
+        # 如果没有指定 --report 参数，使用默认值 True
+        # 如果明确指定了 --report，则使用指定的值
+        generate_report = True if args.pdf is None else args.report
+        
+        success = extractor.run(
+            pdf_path=args.pdf,
+            output_dir=args.output,
+            auto_open=args.open,
+            generate_report=generate_report
+        )
+        
+        if not success:
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        print("\n\n⚠️ 用户中断操作")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n❌ 程序运行出错: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
