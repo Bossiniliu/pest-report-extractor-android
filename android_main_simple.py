@@ -14,15 +14,29 @@ from pathlib import Path
 import sys
 import traceback
 
-# Android 存储路径
+# Android 存储路径 - 使用内部存储(无需权限)
 try:
     from android.permissions import request_permissions, Permission
-    from android.storage import primary_external_storage_path
+    from android.storage import app_storage_path
+    from jnius import autoclass
     ANDROID = True
+    
     try:
-        STORAGE_PATH = primary_external_storage_path()
-    except:
-        STORAGE_PATH = "/sdcard"
+        # 获取应用特定目录(不需要权限)
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        context = PythonActivity.mActivity
+        external_files = context.getExternalFilesDir(None)
+        
+        if external_files:
+            STORAGE_PATH = str(external_files.getAbsolutePath())
+        else:
+            STORAGE_PATH = str(app_storage_path())
+    except Exception as e:
+        print(f"警告: {e}")
+        try:
+            STORAGE_PATH = str(app_storage_path())
+        except:
+            STORAGE_PATH = "/data/data/com.pestcontrol.pestreportextractor/files"
 except:
     ANDROID = False
     STORAGE_PATH = str(Path.home())

@@ -26,15 +26,33 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 from datetime import datetime
 
-# Android 存储路径
+# Android 存储路径 - 优先使用内部存储(无需权限)
 try:
     from android.permissions import request_permissions, Permission, check_permission
-    from android.storage import primary_external_storage_path
+    from android.storage import app_storage_path
+    from jnius import autoclass
     ANDROID = True
+    
+    # 使用应用内部存储(不需要权限)
     try:
-        STORAGE_PATH = primary_external_storage_path()
-    except Exception:
-        STORAGE_PATH = "/sdcard"
+        # 获取应用特定的外部存储目录
+        Environment = autoclass('android.os.Environment')
+        PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        context = PythonActivity.mActivity
+        
+        # 使用 getExternalFilesDir() - 不需要权限
+        external_files = context.getExternalFilesDir(None)
+        if external_files:
+            STORAGE_PATH = str(external_files.getAbsolutePath())
+        else:
+            # Fallback 到内部存储
+            STORAGE_PATH = str(app_storage_path())
+    except Exception as e:
+        print(f"警告: 无法获取外部存储: {e}")
+        try:
+            STORAGE_PATH = str(app_storage_path())
+        except:
+            STORAGE_PATH = "/data/data/com.pestcontrol.pestreportextractor/files"
 except ImportError:
     ANDROID = False
     STORAGE_PATH = str(Path.home())

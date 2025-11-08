@@ -17,7 +17,7 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 2.0
 
 # 应用依赖
-requirements = python3,kivy,pdfplumber,openpyxl,pandas,pillow,pycryptodome
+requirements = python3,kivy,pyjnius,pdfplumber,openpyxl,pandas,pillow,pycryptodome
 
 # 图标和启动画面（可选，如果没有会使用默认）
 # icon.filename = %(source.dir)s/icon.png
@@ -27,12 +27,13 @@ requirements = python3,kivy,pdfplumber,openpyxl,pandas,pillow,pycryptodome
 orientation = portrait
 fullscreen = 0
 
-# Android 权限
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
+# Android 权限 - 使用分隔符隔开
+android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, INTERNET
 
 # Android API 版本
 android.api = 33
 android.minapi = 21
+android.targetSdkVersion = 29
 android.ndk = 25b
 
 # Android 架构
@@ -43,6 +44,9 @@ android.accept_sdk_license = True
 
 # Android 入口点
 android.entrypoint = org.kivy.android.PythonActivity
+
+# 请求权限
+android.uses_library = org.apache.http.legacy
 
 # 跳过更新（加速构建）
 android.skip_update = False
