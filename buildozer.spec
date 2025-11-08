@@ -7,16 +7,18 @@ title = 虫害报告提取器
 package.name = pestreportextractor
 package.domain = com.pestcontrol
 
-# 主程序入口
+# 主程序入口 - 使用最小化版本
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
+
+# 指定主 Python 文件
+p4a.entrypoint = android_main_minimal:main
 
 # 版本号
 version = 3.0
 
-# 应用依赖 - 最小化配置
-requirements = python3,\
-               kivy
+# 应用依赖 - 完全最小化（不使用 Kivy，改用系统原生 WebView）
+requirements = python3
 
 # 图标和启动画面
 # icon.filename = %(source.dir)s/icon.png
