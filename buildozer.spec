@@ -11,14 +11,15 @@ package.domain = com.pestcontrol
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 
-# 指定主 Python 文件
-p4a.entrypoint = android_main_minimal:main
-
 # 版本号
 version = 3.0
 
-# 应用依赖 - 完全最小化（不使用 Kivy，改用系统原生 WebView）
+# 应用依赖 - 完全最小化
 requirements = python3
+
+# Bootstrap - 使用 webview bootstrap 避免 pyjnius 编译问题
+# 这使用系统的 WebView 而不是需要编译的 JNI 库
+p4a.bootstrap = webview
 
 # 图标和启动画面
 # icon.filename = %(source.dir)s/icon.png
