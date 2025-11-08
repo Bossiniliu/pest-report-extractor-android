@@ -14,18 +14,10 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 
 # 版本号
-version = 2.1
+version = 2.0
 
-# 应用依赖 - Android 15 优化版本
-# 为了提高兼容性，使用更稳定的版本
-requirements = python3==3.9,\
-               kivy==2.1.0,\
-               pyjnius==1.4.2,\
-               pdfplumber==0.8.0,\
-               openpyxl==3.0.10,\
-               pandas==1.3.5,\
-               pillow==9.2.0,\
-               pycryptodome==3.15.0
+# 应用依赖
+requirements = python3,kivy,pyjnius,pdfplumber,openpyxl,pandas,pillow,pycryptodome
 
 # 图标和启动画面（可选，如果没有会使用默认）
 # icon.filename = %(source.dir)s/icon.png
@@ -38,21 +30,14 @@ fullscreen = 0
 # Android 权限 - 使用应用专属存储,无需危险权限
 android.permissions = INTERNET
 
-# ===== Android 15 优化配置 =====
-
-# 安全考虑：降低目标 SDK 版本以提高兼容性
-# 注意：降低 targetSdkVersion 可能会影响 Google Play 要求
-# 但对于本地测试和 Android 15 兼容性调试很重要
-android.api = 31
+# Android API 版本
+android.api = 34
 android.minapi = 21
-android.targetSdkVersion = 31
-
-# NDK 版本 - 尝试较旧的稳定版本
+android.targetSdkVersion = 34
 android.ndk = 25b
 
-# Android 架构 - 仅编译 ARM64（S25 Ultra 使用）
-# 减少构建时间和 APK 大小
-android.archs = arm64-v8a
+# Android 架构
+android.archs = arm64-v8a,armeabi-v7a
 
 # 接受 Android SDK 许可证
 android.accept_sdk_license = True
@@ -65,9 +50,6 @@ android.uses_library = org.apache.http.legacy
 
 # 跳过更新（加速构建）
 android.skip_update = False
-
-# Java 版本（Android 15 可能需要）
-android.java_modules = org.kivy,org.renpy,android
 
 # Android ANT 路径
 # android.ant_path =

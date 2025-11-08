@@ -1,0 +1,133 @@
+name: 测试 APK 构建 (Android 15 调试)
+
+on:
+  workflow_dispatch:  # 仅手动触发测试
+  push:
+    branches: [ test/android15 ]
+
+jobs:
+  build-minimal:
+    name: 构建极简版 (基础 Kivy)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+
+    - name: 🔧 配置 Git 环境
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global --add safe.directory '*'
+
+    - name: 🐍 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+      env:
+        PIP_BREAK_SYSTEM_PACKAGES: 1
+
+    - name: 📦 安装 Buildozer 依赖
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          git zip unzip openjdk-17-jdk autoconf automake libtool gettext \
+          dh-autoreconf pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
+          cmake libffi-dev libssl-dev libltdl-dev python3-setuptools build-essential
+
+    - name: 📦 安装 Buildozer
+      run: |
+        pip install --upgrade pip
+        pip install cython==0.29.33
+        pip install buildozer
+
+    - name: 📝 准备最小化程序
+      run: |
+        cp android_minimal_test.py main.py
+        echo "✅ 已创建最小化版本"
+
+    - name: 🔨 构建 APK (极简版)
+      env:
+        PIP_BREAK_SYSTEM_PACKAGES: 1
+      run: |
+        yes | buildozer android debug || buildozer android debug
+
+    - name: 📊 显示构建结果
+      run: |
+        ls -lh bin/ || echo "bin 目录不存在"
+        if [ -f bin/*.apk ]; then
+          echo "✅ APK 构建成功！"
+          ls -lh bin/*.apk
+        else
+          echo "❌ APK 构建失败"
+          exit 1
+        fi
+
+    - name: 📤 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: pestreportextractor-minimal-test
+        path: bin/*.apk
+        if-no-files-found: error
+
+  build-with-optimized-spec:
+    name: 构建优化版本 (API 31 + 固定版本)
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+
+    - name: 🔧 配置 Git 环境
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global --add safe.directory '*'
+
+    - name: 🐍 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+      env:
+        PIP_BREAK_SYSTEM_PACKAGES: 1
+
+    - name: 📦 安装 Buildozer 依赖
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          git zip unzip openjdk-17-jdk autoconf automake libtool gettext \
+          dh-autoreconf pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev \
+          cmake libffi-dev libssl-dev libltdl-dev python3-setuptools build-essential
+
+    - name: 📦 安装 Buildozer
+      run: |
+        pip install --upgrade pip
+        pip install cython==0.29.33
+        pip install buildozer
+
+    - name: 📝 准备主程序
+      run: |
+        cp android_main.py main.py
+        echo "✅ 已创建main.py"
+
+    - name: 🔨 构建 APK (优化版本)
+      env:
+        PIP_BREAK_SYSTEM_PACKAGES: 1
+      run: |
+        yes | buildozer android debug || buildozer android debug
+
+    - name: 📊 显示构建结果
+      run: |
+        ls -lh bin/ || echo "bin 目录不存在"
+        if [ -f bin/*.apk ]; then
+          echo "✅ APK 构建成功！"
+          ls -lh bin/*.apk
+        else
+          echo "❌ APK 构建失败"
+          exit 1
+        fi
+
+    - name: 📤 上传 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: pestreportextractor-optimized
+        path: bin/*.apk
+        if-no-files-found: error
