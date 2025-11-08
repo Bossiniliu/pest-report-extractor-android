@@ -14,8 +14,8 @@ source.include_exts = py,png,jpg,html,css,js
 # 版本号
 version = 3.0
 
-# 应用依赖 - Flask Web 版本（最小化）
-requirements = python3,flask
+# 应用依赖 - 超最小化版本（仅需 Python 3）
+requirements = python3
 
 # Bootstrap - 使用 sdl2 bootstrap 运行 Web 服务器
 p4a.bootstrap = sdl2

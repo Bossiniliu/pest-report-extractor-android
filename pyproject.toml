@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pestreportextractor"
+version = "3.0"
+description = "虫害报告提取器 - BeeWare 版本"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Bossiniliu", email = "bossiniliu@example.com"},
+]
+
+dependencies = [
+    "toga>=0.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "flake8>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Bossiniliu/pest-report-extractor-android"
+
+[tool.briefcase]
+project_name = "虫害报告提取器"
+bundle = "com.pestcontrol"
+author = "Bossiniliu"
+author_email = "bossiniliu@example.com"
+url = "https://github.com/Bossiniliu/pest-report-extractor-android"
+license = "MIT"
+description = "自动提取虫害报告的工具"
+
+[tool.briefcase.app.pestreportextractor]
+formal_name = "虫害报告提取器"
+description = "自动提取虫害情况的应用"
+bundle = "com.pestcontrol"
+url = "https://github.com/Bossiniliu/pest-report-extractor-android"
+
+# Linux deployments
+[tool.briefcase.app.pestreportextractor.linux]
+requires = []
+
+# macOS deployments
+[tool.briefcase.app.pestreportextractor.macos]
+requires = []
+
+# Windows deployments
+[tool.briefcase.app.pestreportextractor.windows]
+requires = []
+
+# iOS deployments
+[tool.briefcase.app.pestreportextractor.iOS]
+requires = []
+
+# Android deployments
+[tool.briefcase.app.pestreportextractor.android]
+requires = [
+    "toga-android>=0.4.0",
+]
+permissions = ["INTERNET"]
+orientations = ["portrait", "sensor-portrait"]
+
+# Gradle configuration
+gradle_version = "8.0"
+build_gradle_dependencies = [
+    "androidx.appcompat:appcompat:1.6.1",
+    "androidx.constraintlayout:constraintlayout:2.1.4",
+]
+
+# SDK configuration
+android_api_level = "34"
+android_min_api_level = "24"
+android_target_sdk_version = "31"
+android_ndk_version = "25.2.9519653"
+
+# Build features
+build_features = {
+    viewBinding = true,
+    aidl = false,
+}
