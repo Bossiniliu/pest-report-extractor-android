@@ -27,13 +27,13 @@ requirements = python3,kivy,pyjnius,pdfplumber,openpyxl,pandas,pillow,pycryptodo
 orientation = portrait
 fullscreen = 0
 
-# Android 权限 - 使用分隔符隔开
-android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, INTERNET
+# Android 权限 - Android 11+ 分区存储支持
+android.permissions = READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, INTERNET, MANAGE_EXTERNAL_STORAGE
 
 # Android API 版本
 android.api = 33
 android.minapi = 21
-android.targetSdkVersion = 29
+android.targetSdkVersion = 33
 android.ndk = 25b
 
 # Android 架构
@@ -44,6 +44,12 @@ android.accept_sdk_license = True
 
 # Android 入口点
 android.entrypoint = org.kivy.android.PythonActivity
+
+# Android 11+ 分区存储配置
+android.manifest.application = requestLegacyExternalStorage="true"
+
+# 请求所有文件访问权限 (Android 11+)
+android.manifest.uses-permission = MANAGE_EXTERNAL_STORAGE
 
 # 请求权限
 android.uses_library = org.apache.http.legacy

@@ -26,33 +26,38 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 from datetime import datetime
 
-# Android 存储路径 - 优先使用内部存储(无需权限)
+# Android 存储路径配置
 try:
     from android.permissions import request_permissions, Permission, check_permission
-    from android.storage import app_storage_path
-    from jnius import autoclass
+    from android.storage import app_storage_path, primary_external_storage_path
+    from jnius import autoclass, cast
     ANDROID = True
     
-    # 使用应用内部存储(不需要权限)
+    # 获取应用存储路径
     try:
-        # 获取应用特定的外部存储目录
-        Environment = autoclass('android.os.Environment')
         PythonActivity = autoclass('org.kivy.android.PythonActivity')
+        Environment = autoclass('android.os.Environment')
         context = PythonActivity.mActivity
         
-        # 使用 getExternalFilesDir() - 不需要权限
-        external_files = context.getExternalFilesDir(None)
+        # 优先使用 Documents 目录
+        documents_dir = Environment.DIRECTORY_DOCUMENTS
+        external_files = context.getExternalFilesDir(documents_dir)
+        
         if external_files:
             STORAGE_PATH = str(external_files.getAbsolutePath())
+            print(f"使用应用专属外部存储: {STORAGE_PATH}")
         else:
-            # Fallback 到内部存储
+            # Fallback: 应用内部存储
             STORAGE_PATH = str(app_storage_path())
+            print(f"使用应用内部存储: {STORAGE_PATH}")
+            
     except Exception as e:
-        print(f"警告: 无法获取外部存储: {e}")
+        print(f"警告: 存储路径获取失败: {e}")
         try:
             STORAGE_PATH = str(app_storage_path())
         except:
             STORAGE_PATH = "/data/data/com.pestcontrol.pestreportextractor/files"
+            
 except ImportError:
     ANDROID = False
     STORAGE_PATH = str(Path.home())
@@ -495,24 +500,44 @@ class PestReportApp(App):
     def request_android_permissions(self, dt):
         """请求Android权限（延迟执行）"""
         try:
+            from android import api_version
+            
             permissions = [
                 Permission.READ_EXTERNAL_STORAGE,
                 Permission.WRITE_EXTERNAL_STORAGE
             ]
             
-            # Android 11+ 需要额外权限
-            try:
-                from android import api_version
-                if api_version >= 30:
-                    # Android 11+ 使用分区存储
-                    self.update_status('📱 Android 11+ 检测到\n请在应用设置中授予文件访问权限')
-            except:
-                pass
-            
-            request_permissions(permissions)
-            self.update_status('✅ 权限请求已发送\n如果未弹出权限对话框，请手动在设置中授权')
+            # Android 11+ (API 30+) 特殊处理
+            if api_version >= 30:
+                self.update_status('📱 Android 11+ 检测到\n\n文件将保存到应用专属目录：\n/Android/data/.../files/Documents/虫害报告\n\n无需额外权限！')
+                
+                # 尝试请求 MANAGE_EXTERNAL_STORAGE（可选）
+                try:
+                    from jnius import autoclass
+                    Intent = autoclass('android.content.Intent')
+                    Settings = autoclass('android.provider.Settings')
+                    Uri = autoclass('android.net.Uri')
+                    PythonActivity = autoclass('org.kivy.android.PythonActivity')
+                    
+                    # 检查是否有所有文件访问权限
+                    if api_version >= 30:
+                        Environment = autoclass('android.os.Environment')
+                        if not Environment.isExternalStorageManager():
+                            # 引导用户到设置页面
+                            intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                            uri = Uri.parse(f"package:{PythonActivity.mActivity.getPackageName()}")
+                            intent.setData(uri)
+                            PythonActivity.mActivity.startActivity(intent)
+                            self.update_status('📱 请在设置中授予"所有文件访问权限"\n\n（可选，用于访问共享存储）')
+                except Exception as e:
+                    print(f"无法请求 MANAGE_EXTERNAL_STORAGE: {e}")
+            else:
+                # Android 10 及以下
+                request_permissions(permissions)
+                self.update_status('✅ 权限请求已发送\n如果未弹出权限对话框，请手动在设置中授权')
+                
         except Exception as e:
-            self.update_status(f'⚠️ 权限请求失败: {str(e)}\n请手动在设置中授予存储权限')
+            self.update_status(f'📂 使用应用专属存储\n文件将保存到:\n{STORAGE_PATH}')
     
     def select_pdf(self, instance):
         """选择PDF文件"""
