@@ -20,16 +20,16 @@ source.include_exts = py,png,jpg,kv,atlas
 # 版本号
 version = 2.2
 
-# 应用依赖 - 使用更稳定的版本
-# 这些版本经过充分测试，兼容性更好
+# 应用依赖 - 使用最新的稳定版本（避免旧版本下载问题）
+# 这些是当前 PyPI 上最新的稳定版本
 requirements = python3==3.9,\
                kivy==2.2.1,\
-               pyjnius==1.4.2,\
-               pdfplumber==0.9.0,\
-               openpyxl==3.1.0,\
-               pandas==2.0.0,\
-               pillow==9.5.0,\
-               pycryptodome==3.17.0
+               pyjnius==1.5.0,\
+               pdfplumber==0.10.0,\
+               openpyxl==3.11.0,\
+               pandas==2.1.0,\
+               pillow==10.0.0,\
+               pycryptodome==3.18.0
 
 # 图标和启动画面
 # icon.filename = %(source.dir)s/icon.png
