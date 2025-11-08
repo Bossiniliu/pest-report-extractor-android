@@ -1,33 +1,32 @@
 [app]
 
-# 应用名称（显示在手机上的名称）
+# 应用名称
 title = 虫害报告提取器
 
-# 包名（唯一标识符）
+# 包名
 package.name = pestreportextractor
-
-# 包域名
 package.domain = com.pestcontrol
 
 # 主程序入口
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 
+# ===== Android 16 优化配置 =====
 # 版本号
-version = 2.1
+version = 2.2
 
-# 应用依赖 - Android 15 优化版本
-# 为了提高兼容性，使用更稳定的版本
-requirements = python3==3.9,\
-               kivy==2.1.0,\
-               pyjnius==1.4.2,\
-               pdfplumber==0.8.0,\
-               openpyxl==3.0.10,\
-               pandas==1.3.5,\
-               pillow==9.2.0,\
-               pycryptodome==3.15.0
+# 应用依赖 - 使用最新版本针对 Android 16
+# 注意：这些是最新可用的版本，应该提供最好的 Android 16 支持
+requirements = python3==3.11,\
+               kivy==2.3.0,\
+               pyjnius==1.5.0,\
+               pdfplumber==0.10.0,\
+               openpyxl==3.11.0,\
+               pandas==2.1.0,\
+               pillow==10.0.0,\
+               pycryptodome==3.18.0
 
-# 图标和启动画面（可选，如果没有会使用默认）
+# 图标和启动画面
 # icon.filename = %(source.dir)s/icon.png
 # presplash.filename = %(source.dir)s/presplash.png
 
@@ -35,63 +34,39 @@ requirements = python3==3.9,\
 orientation = portrait
 fullscreen = 0
 
-# Android 权限 - 使用应用专属存储,无需危险权限
+# Android 权限 - 仅网络权限
 android.permissions = INTERNET
 
-# ===== Android 15 优化配置 =====
+# ===== Android 16 特定配置 =====
+# API 版本配置
+android.api = 36              # 编译 API 36（Android 16）
+android.minapi = 30           # 最低支持 Android 11
+android.targetSdkVersion = 34 # 目标保持在 34 以兼容性为主
 
-# 安全考虑：降低目标 SDK 版本以提高兼容性
-# 注意：降低 targetSdkVersion 可能会影响 Google Play 要求
-# 但对于本地测试和 Android 15 兼容性调试很重要
-android.api = 31
-android.minapi = 21
-android.targetSdkVersion = 31
+# 使用最新的 NDK
+android.ndk = 26b
 
-# NDK 版本 - 尝试较旧的稳定版本
-android.ndk = 25b
-
-# Android 架构 - 仅编译 ARM64（S25 Ultra 使用）
-# 减少构建时间和 APK 大小
+# 仅编译 ARM64（S25 Ultra）
 android.archs = arm64-v8a
 
-# 接受 Android SDK 许可证
+# 接受许可证
 android.accept_sdk_license = True
 
 # Android 入口点
 android.entrypoint = org.kivy.android.PythonActivity
 
-# 请求权限
+# 使用 Apache HTTP 库支持
 android.uses_library = org.apache.http.legacy
 
 # 跳过更新（加速构建）
 android.skip_update = False
 
-# Java 版本（Android 15 可能需要）
-android.java_modules = org.kivy,org.renpy,android
-
-# Android ANT 路径
-# android.ant_path =
-
-# 添加 Java 代码或库（如果需要）
-# android.add_src =
-
-# 添加 Android AAR 库
-# android.gradle_dependencies =
-
-# Android AAB 格式（Google Play 需要）
-# android.release_artifact = aab
-android.release_artifact = apk
-
-# 日志级别
+# 日志配置 - 启用详细日志以便诊断
 log_level = 2
-
-# 警告
 warn_on_root = 1
 
 [buildozer]
 
-# 日志级别（0 = 最少，2 = 最多）
+# 日志级别
 log_level = 2
-
-# 警告退出
 warn_on_root = 1
