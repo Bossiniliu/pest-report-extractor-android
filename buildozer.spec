@@ -48,8 +48,8 @@ android.archs = arm64-v8a
 # 接受许可证
 android.accept_sdk_license = True
 
-# Android 入口点 - 标准 PythonActivity
-android.entrypoint = org.kivy.android.PythonActivity
+# Android 入口点 - 自定义 MainActivity（包装 PythonActivity）
+android.entrypoint = com.pestcontrol.pestreportextractor.MainActivity
 
 # 使用 Apache HTTP 库支持
 android.uses_library = org.apache.http.legacy
