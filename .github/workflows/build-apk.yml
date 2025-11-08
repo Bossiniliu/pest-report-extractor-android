@@ -37,6 +37,7 @@ jobs:
           automake \
           libtool \
           gettext \
+          gettext-base \
           pkg-config \
           zlib1g-dev \
           libncurses5-dev \
@@ -47,6 +48,8 @@ jobs:
           libltdl-dev \
           python3-setuptools \
           build-essential
+        # 确保 autopoint 可用
+        which autopoint || sudo ln -s /usr/bin/autopoint /usr/local/bin/autopoint 2>/dev/null || true
     
     - name: 📦 安装 Buildozer
       run: |
