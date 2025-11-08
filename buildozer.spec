@@ -43,10 +43,12 @@ fullscreen = 0
 android.permissions = INTERNET
 
 # ===== 关键：降级到 Android 14 标准 =====
-# API 版本配置 - 针对 Android 14
-android.api = 34              # 编译 API 34（Android 14）
-android.minapi = 21           # 最低支持 Android 5.0
-android.targetSdkVersion = 33 # 目标 Android 13
+# API 版本配置 - 针对 Android 14（编译 API 34）
+android.api = 34
+# 最低支持 Android 5.0
+android.minapi = 21
+# 目标 Android 13
+android.targetSdkVersion = 33
 
 # 使用稳定的 NDK
 android.ndk = 25b
