@@ -11,20 +11,25 @@ package.domain = com.pestcontrol
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 
-# ===== Android 16 优化配置 =====
+# ===== Android 14 (API 34) 回退配置 =====
+# 这个配置针对 Android 14，尽管设备是 Android 16
+# 这样做的目的是告诉 Android 16：
+# "我只需要 Android 14 的功能"
+# 可以绕过 Android 16 的某些新限制
+#
 # 版本号
 version = 2.2
 
-# 应用依赖 - 使用最新版本针对 Android 16
-# 注意：这些是最新可用的版本，应该提供最好的 Android 16 支持
-requirements = python3==3.11,\
-               kivy==2.3.0,\
-               pyjnius==1.5.0,\
-               pdfplumber==0.10.0,\
-               openpyxl==3.11.0,\
-               pandas==2.1.0,\
-               pillow==10.0.0,\
-               pycryptodome==3.18.0
+# 应用依赖 - 使用更稳定的版本
+# 这些版本经过充分测试，兼容性更好
+requirements = python3==3.9,\
+               kivy==2.2.1,\
+               pyjnius==1.4.2,\
+               pdfplumber==0.9.0,\
+               openpyxl==3.1.0,\
+               pandas==2.0.0,\
+               pillow==9.5.0,\
+               pycryptodome==3.17.0
 
 # 图标和启动画面
 # icon.filename = %(source.dir)s/icon.png
@@ -37,16 +42,14 @@ fullscreen = 0
 # Android 权限 - 仅网络权限
 android.permissions = INTERNET
 
-# ===== Android 16 特定配置 =====
-# API 版本配置（编译 API 36 - Android 16）
-android.api = 36
-# 最低支持 Android 11
-android.minapi = 30
-# 目标保持在 34 以兼容性为主
-android.targetSdkVersion = 34
+# ===== 关键：降级到 Android 14 标准 =====
+# API 版本配置 - 针对 Android 14
+android.api = 34              # 编译 API 34（Android 14）
+android.minapi = 21           # 最低支持 Android 5.0
+android.targetSdkVersion = 33 # 目标 Android 13
 
-# 使用最新的 NDK
-android.ndk = 26b
+# 使用稳定的 NDK
+android.ndk = 25b
 
 # 仅编译 ARM64（S25 Ultra）
 android.archs = arm64-v8a
